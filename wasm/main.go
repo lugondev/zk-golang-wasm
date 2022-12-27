@@ -124,9 +124,9 @@ func verifyProof() js.Func {
 		}
 
 		if err := groth16.Verify(proofG16, vkKey.VK, publicWitness); err != nil {
-			return fmt.Sprintf("{'error': '%s'}", err.Error())
+			return jsErr(err, "Cannot verify proof")
 		} else {
-			return fmt.Sprintf("{'message': '%s'}", "Proof Verified")
+			return jsErr(nil, "Proof verified")
 		}
 	})
 }
