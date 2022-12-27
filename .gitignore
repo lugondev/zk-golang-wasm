@@ -1,0 +1,9 @@
+.idea
+
+**/artifacts
+**/artifacts/**.*
+
+.deps
+cache
+
+node_modules
