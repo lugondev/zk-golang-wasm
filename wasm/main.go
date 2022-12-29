@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-playground/validator/v10"
 	"gnark-bid/zk"
+	"gnark-bid/zk/circuits"
 	"math/big"
 	"syscall/js"
 )
@@ -38,7 +39,7 @@ func hash() js.Func {
 		}
 
 		value := common.FromHex(args[0].String())
-		hashMIMC := zk.HashMIMC(value)
+		hashMIMC := zk_circuit.HashMIMC(value)
 		return fmt.Sprintf("{'numHash': '%s','hexHash': '%s'}", hashMIMC.String(), hashMIMC.Text(16))
 	})
 }
@@ -56,25 +57,26 @@ func generateProof() js.Func {
 		privateValue := new(big.Int).SetBytes(inputBytes)
 		fmt.Println("privateValue", privateValue.String())
 
-		assignment := zk.BidCircuit{
+		assignment := zk_circuit.BidCircuit{
 			PrivateValue: privateValue.String(),
-			Hash:         zk.HashMIMC(inputBytes).String(),
+			Hash:         zk_circuit.HashMIMC(inputBytes).String(),
 		}
 
 		if err := validation.Var(args[0].String(), "required,hexadecimal"); err != nil {
 			return jsErr(err, "Invalid argument input passed")
 		}
 
-		vkKey, err := ReadJsonVPKey()
+		vkKey, err := GetVPKey("BidCircuit")
 		if err != nil {
 			return jsErr(err, "Cannot read keys")
 		}
 
-		g16, err := zk.NewGnarkGroth16(vkKey)
+		var c zk_circuit.BidCircuit
+		g16, err := zk.NewGnarkGroth16(vkKey, &c)
 		if err != nil {
 			return jsErr(err, "")
 		}
-		inputProof := [1]*big.Int{zk.HashMIMC(inputBytes)}
+		inputProof := [1]*big.Int{zk_circuit.HashMIMC(inputBytes)}
 		proofGenerated, err := g16.GenerateProof(assignment, inputProof)
 		if err != nil {
 			return jsErr(err, "Cannot generate proof")
@@ -102,12 +104,12 @@ func verifyProof() js.Func {
 		hashValue := new(big.Int).SetBytes(hashBytes)
 		fmt.Println("hash", hashValue.String())
 
-		assignment := zk.BidCircuit{
+		assignment := zk_circuit.BidCircuit{
 			PrivateValue: hashValue,
 			Hash:         hashValue.String(),
 		}
 
-		vkKey, err := ReadJsonVPKey()
+		vkKey, err := GetVPKey("BidCircuit")
 		if err != nil {
 			return jsErr(err, "Cannot read keys")
 		}

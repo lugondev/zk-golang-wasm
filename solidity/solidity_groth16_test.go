@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"gnark-bid/zk"
+	"gnark-bid/zk/circuits"
 	"math/big"
 	"os"
 	"testing"
@@ -33,7 +34,7 @@ type ExportSolidityTestSuiteGroth16 struct {
 	vk      groth16.VerifyingKey
 	pk      groth16.ProvingKey
 	proof   *bytes.Buffer
-	circuit zk.BidCircuit
+	circuit zk_circuit.BidCircuit
 	r1cs    frontend.CompiledConstraintSystem
 }
 
@@ -88,9 +89,9 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 	pubValue := int64(40)
 	privValue := int64(42)
 	// create a valid proof
-	var assignment zk.BidCircuit
+	var assignment zk_circuit.BidCircuit
 	assignment.PrivateValue = privValue
-	assignment.Hash = zk.HashMIMC(big.NewInt(privValue).Bytes())
+	assignment.Hash = zk_circuit.HashMIMC(big.NewInt(privValue).Bytes())
 
 	// witness creation
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
@@ -105,9 +106,9 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 	}
 
 	// hidden witness
-	var hiddenAssignment zk.BidCircuit
+	var hiddenAssignment zk_circuit.BidCircuit
 	hiddenAssignment.PrivateValue = int64(0)
-	hiddenAssignment.Hash = zk.HashMIMC(big.NewInt(privValue).Bytes())
+	hiddenAssignment.Hash = zk_circuit.HashMIMC(big.NewInt(privValue).Bytes())
 
 	// witness creation
 	hiddenWitness, err := frontend.NewWitness(&hiddenAssignment, ecc.BN254)
@@ -125,7 +126,7 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 	proofParser := zk.ParserProof(proofBytes)
 
 	// public witness
-	proofParser.Input[0] = zk.HashMIMC(big.NewInt(42).Bytes())
+	proofParser.Input[0] = zk_circuit.HashMIMC(big.NewInt(42).Bytes())
 	// call the contract
 	res, err := t.verifierContract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, proofParser.Input)
 	if t.NoError(err, "calling verifier on chain gave error") {

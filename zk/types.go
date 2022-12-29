@@ -13,8 +13,8 @@ type Proof struct {
 }
 
 type VPKey struct {
-	ProvingKey   string               `json:"provingKey"`
-	VerifyingKey string               `json:"verifyingKey"`
-	VK           groth16.VerifyingKey `json:"vk"`
-	PK           groth16.ProvingKey   `json:"pk"`
+	ProvingKey   string `json:"provingKey"`
+	VerifyingKey string `json:"verifyingKey"`
+	VK           groth16.VerifyingKey
+	PK           groth16.ProvingKey
 }

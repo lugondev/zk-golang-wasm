@@ -7,29 +7,29 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/ethereum/go-ethereum/common"
+	"gnark-bid/zk/circuits"
 	"log"
 	"math/big"
 )
 
 type GnarkGroth16 struct {
-	vk      groth16.VerifyingKey
-	pk      groth16.ProvingKey
-	circuit BidCircuit
-	r1cs    frontend.CompiledConstraintSystem
+	vk   groth16.VerifyingKey
+	pk   groth16.ProvingKey
+	r1cs frontend.CompiledConstraintSystem
 }
 
-func NewGnarkGroth16(key *VPKey) (*GnarkGroth16, error) {
+func NewGnarkGroth16(key *VPKey, circuit frontend.Circuit) (*GnarkGroth16, error) {
 	g16 := &GnarkGroth16{}
-	err := g16.setup(key)
+	err := g16.setup(key, circuit)
 	if err != nil {
 		return nil, err
 	}
 	return g16, nil
 }
 
-func (t *GnarkGroth16) setup(vpKey *VPKey) error {
+func (t *GnarkGroth16) setup(vpKey *VPKey, circuit frontend.Circuit) error {
 	var err error
-	t.r1cs, err = frontend.Compile(ecc.BN254, r1cs.NewBuilder, &t.circuit)
+	t.r1cs, err = frontend.Compile(ecc.BN254, r1cs.NewBuilder, circuit)
 	if err != nil {
 		log.Println(err, "compiling R1CS failed")
 		return err
@@ -60,7 +60,7 @@ func (t *GnarkGroth16) setup(vpKey *VPKey) error {
 	return nil
 }
 
-func (t *GnarkGroth16) GenerateProof(assignment BidCircuit, input [1]*big.Int) (*Proof, error) {
+func (t *GnarkGroth16) GenerateProof(assignment zk_circuit.BidCircuit, input [1]*big.Int) (*Proof, error) {
 	// witness creation
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
 	if err != nil {
