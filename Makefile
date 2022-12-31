@@ -9,10 +9,13 @@ clean-abi-generated:
 	cd solidity && rm -fr ./abi/*
 
 solc: clean-abi-generated
-	cd solidity && solc --bin --abi -o ./abi contract_g16.sol
+	cd solidity && solc --bin --abi -o ./abi *.sol
 
 abigen: solc
 	cd solidity && abigen --bin ./abi/Verifier.bin --abi abi/Verifier.abi --pkg solidity --out solidity_groth16.go --type Verifier
+
+abigen-merkle: solc
+	cd solidity && abigen --bin ./abi/MerkleProof.bin --abi abi/MerkleProof.abi --pkg solidity --out MerkleProof.go --type MerkleProof
 
 go-test: abigen
 	cd solidity && go test

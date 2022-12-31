@@ -1,4 +1,4 @@
-package merkle_test
+package merkle_tree_test
 
 import (
 	"github.com/cbergoon/merkletree"
@@ -27,16 +27,22 @@ func (t TestContent) Equals(other merkletree.Content) (bool, error) {
 	return t.x == other.(TestContent).x, nil
 }
 
-func Test_MerkleTree(t *testing.T) {
-	//Build list of ByteContent to build tree
+func TestNewMerkleTree(t *testing.T) {
+	//Build list of Content to build tree
 	var list []merkletree.Content
 	list = append(list, TestContent{x: "a"})
 	list = append(list, TestContent{x: "b"})
 	list = append(list, TestContent{x: "c"})
 	list = append(list, TestContent{x: "d"})
+	list = append(list, TestContent{x: "e"})
+	list = append(list, TestContent{x: "f"})
+	list = append(list, TestContent{x: "g"})
+	list = append(list, TestContent{x: "h"})
+	list = append(list, TestContent{x: "i"})
+	list = append(list, TestContent{x: "j"})
 
-	//Create a new Merkle Tree from the list of ByteContent
-	tree, err := merkletree.NewTreeWithHashStrategy(list, sha3.NewLegacyKeccak256)
+	//Create a new Merkle Tree from the list of Content
+	tree, err := merkletree.NewTreeWithHashStrategySorted(list, sha3.NewLegacyKeccak256, true)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,29 +58,24 @@ func Test_MerkleTree(t *testing.T) {
 	}
 	log.Println("Verify Tree: ", vt)
 
-	//Verify a specific content in in the tree
+	//Verify a specific content in the tree
 	vc, err := tree.VerifyContent(list[0])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("Verify ByteContent: ", vc)
+	log.Println("Verify Content: ", vc)
 
 	//String representation
 	log.Println(tree)
-	hash, err := list[0].CalculateHash()
+	c := list[1]
+	cHash, _ := c.CalculateHash()
+	log.Println("cHash: ", common.Bytes2Hex(cHash))
+	merklePath, _, err := tree.GetMerklePath(c)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("hash leaf:", common.Bytes2Hex(hash))
-	merklePath, i, err := tree.GetMerklePath(list[0])
-	if err != nil {
-		log.Fatal(err)
+	for _, p := range merklePath {
+		log.Println(common.Bytes2Hex(p))
 	}
-	log.Println(i)
-	log.Println(merklePath)
-	for path := range merklePath {
-		log.Println(common.Bytes2Hex(merklePath[path]))
-	}
-	//log.Println(string(marshal))
 }
