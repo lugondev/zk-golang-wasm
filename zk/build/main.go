@@ -17,7 +17,7 @@ type VP struct {
 }
 
 func main() {
-	var cBid zk_circuit.BidCircuit
+	var cBid zk_circuit.PrivateValueCircuit
 	var cMerkle zk_circuit.MerkleCircuit
 	cMerkle.Path = make([]frontend.Variable, 2)
 	cMerkle.Helper = make([]frontend.Variable, 1)

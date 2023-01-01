@@ -60,7 +60,7 @@ func (t *GnarkGroth16) setup(vpKey *VPKey, circuit frontend.Circuit) error {
 	return nil
 }
 
-func (t *GnarkGroth16) GenerateProof(assignment zk_circuit.BidCircuit, input [1]*big.Int) (*Proof, error) {
+func (t *GnarkGroth16) GenerateProof(assignment zk_circuit.PrivateValueCircuit, input [1]*big.Int) (*Proof, error) {
 	// witness creation
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254)
 	if err != nil {

@@ -5,13 +5,13 @@ import (
 	"gnark-bid/circuits"
 )
 
-type BidCircuit struct {
+type PrivateValueCircuit struct {
 	PrivateValue frontend.Variable
 	Hash         frontend.Variable `gnark:",public"`
 }
 
 // Define declares the circuit's constraints
-func (circuit *BidCircuit) Define(api frontend.API) error {
+func (circuit *PrivateValueCircuit) Define(api frontend.API) error {
 	api.AssertIsEqual(circuits.IsZero(api, circuit.PrivateValue), 0)
 
 	hashMIMC := HashPreImage(api, circuit.PrivateValue)

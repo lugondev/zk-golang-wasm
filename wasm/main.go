@@ -57,7 +57,7 @@ func generateProof() js.Func {
 		privateValue := new(big.Int).SetBytes(inputBytes)
 		fmt.Println("privateValue", privateValue.String())
 
-		assignment := zk_circuit.BidCircuit{
+		assignment := zk_circuit.PrivateValueCircuit{
 			PrivateValue: privateValue.String(),
 			Hash:         zk_circuit.HashMIMC(inputBytes).String(),
 		}
@@ -66,12 +66,12 @@ func generateProof() js.Func {
 			return jsErr(err, "Invalid argument input passed")
 		}
 
-		vkKey, err := GetVPKey("BidCircuit")
+		vkKey, err := GetVPKey("PrivateValueCircuit")
 		if err != nil {
 			return jsErr(err, "Cannot read keys")
 		}
 
-		var c zk_circuit.BidCircuit
+		var c zk_circuit.PrivateValueCircuit
 		g16, err := zk.NewGnarkGroth16(vkKey, &c)
 		if err != nil {
 			return jsErr(err, "")
@@ -104,12 +104,12 @@ func verifyProof() js.Func {
 		hashValue := new(big.Int).SetBytes(hashBytes)
 		fmt.Println("hash", hashValue.String())
 
-		assignment := zk_circuit.BidCircuit{
+		assignment := zk_circuit.PrivateValueCircuit{
 			PrivateValue: hashValue,
 			Hash:         hashValue.String(),
 		}
 
-		vkKey, err := GetVPKey("BidCircuit")
+		vkKey, err := GetVPKey("PrivateValueCircuit")
 		if err != nil {
 			return jsErr(err, "Cannot read keys")
 		}

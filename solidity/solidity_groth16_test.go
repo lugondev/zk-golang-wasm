@@ -34,7 +34,7 @@ type ExportSolidityTestSuiteGroth16 struct {
 	vk      groth16.VerifyingKey
 	pk      groth16.ProvingKey
 	proof   *bytes.Buffer
-	circuit zk_circuit.BidCircuit
+	circuit zk_circuit.PrivateValueCircuit
 	r1cs    frontend.CompiledConstraintSystem
 }
 
@@ -89,7 +89,7 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 	pubValue := int64(40)
 	privValue := int64(42)
 	// create a valid proof
-	var assignment zk_circuit.BidCircuit
+	var assignment zk_circuit.PrivateValueCircuit
 	assignment.PrivateValue = privValue
 	assignment.Hash = zk_circuit.HashMIMC(big.NewInt(privValue).Bytes())
 
@@ -106,7 +106,7 @@ func (t *ExportSolidityTestSuiteGroth16) TestVerifyProof() {
 	}
 
 	// hidden witness
-	var hiddenAssignment zk_circuit.BidCircuit
+	var hiddenAssignment zk_circuit.PrivateValueCircuit
 	hiddenAssignment.PrivateValue = int64(0)
 	hiddenAssignment.Hash = zk_circuit.HashMIMC(big.NewInt(privValue).Bytes())
 
