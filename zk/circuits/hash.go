@@ -14,9 +14,12 @@ func HashMIMC(pre []byte) *big.Int {
 	return new(big.Int).SetBytes(h.Sum(nil))
 }
 
-func HashPreImage(api frontend.API, variable frontend.Variable) frontend.Variable {
-	m, _ := mimc.NewMiMC(api)
+func HashPreImage(api frontend.API, variable frontend.Variable) (frontend.Variable, error) {
+	m, err := mimc.NewMiMC(api)
+	if err != nil {
+		return nil, err
+	}
 	m.Write(variable)
 
-	return m.Sum()
+	return m.Sum(), nil
 }

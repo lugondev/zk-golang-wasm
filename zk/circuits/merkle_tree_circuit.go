@@ -11,12 +11,12 @@ type MerkleCircuit struct {
 	Path, Helper []frontend.Variable
 }
 
-func (m *MerkleCircuit) Define(api frontend.API) error {
+func (circuit *MerkleCircuit) Define(api frontend.API) error {
 	hFunc, err := mimc.NewMiMC(api)
 	if err != nil {
 		return err
 	}
 
-	merkle.VerifyProof(api, hFunc, m.RootHash, m.Path, m.Helper)
+	merkle.VerifyProof(api, hFunc, circuit.RootHash, circuit.Path, circuit.Helper)
 	return nil
 }

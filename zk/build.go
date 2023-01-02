@@ -99,7 +99,7 @@ func GenerateTemplateKey(jsonBytes []byte, fileName string) error {
 	if err != nil {
 		return err
 	}
-	tmpl := template.Must(template.ParseFiles(fmt.Sprintf("%s/zk/build/parse_vp_key-template.go", getwd)))
+	tmpl := template.Must(template.ParseFiles(fmt.Sprintf("%s/zk/build/parse_vp_key-template.go.temp", getwd)))
 	var tpl bytes.Buffer
 	if err := tmpl.Execute(&tpl, string(jsonBytes)); err != nil {
 		return err

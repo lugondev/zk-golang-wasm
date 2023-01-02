@@ -14,7 +14,10 @@ type PrivateValueCircuit struct {
 func (circuit *PrivateValueCircuit) Define(api frontend.API) error {
 	api.AssertIsEqual(circuits.IsZero(api, circuit.PrivateValue), 0)
 
-	hashMIMC := HashPreImage(api, circuit.PrivateValue)
+	hashMIMC, err := HashPreImage(api, circuit.PrivateValue)
+	if err != nil {
+		return err
+	}
 	api.AssertIsEqual(circuit.Hash, hashMIMC)
 
 	return nil
