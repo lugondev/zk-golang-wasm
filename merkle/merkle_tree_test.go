@@ -33,7 +33,7 @@ func (t TestContent) Equals(other merkletree.Content) (bool, error) {
 func TestNewMerkleTree(t *testing.T) {
 	//Build list of Content to build tree
 	var list []merkletree.Content
-	maxLeaves := math.BigPow(2, 10)
+	maxLeaves := math.BigPow(2, 5)
 	//maxLeaves := big.NewInt(20)
 	fmt.Println("maxLeaves:", maxLeaves.String())
 	for i := big.NewInt(0); i.Cmp(maxLeaves) < 0; i.Add(i, big.NewInt(1)) {

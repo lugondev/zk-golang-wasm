@@ -77,14 +77,19 @@ func generateProof() js.Func {
 		if err != nil {
 			return jsErr(err, "")
 		}
-		inputProof := [1]*big.Int{zk_circuit.HashMIMC(inputBytes)}
-		proofGenerated, err := g16.GenerateProof(assignment, inputProof)
+
+		inputProof := []*big.Int{zk_circuit.HashMIMC(inputBytes)}
+		proofGenerated, _, err := g16.GenerateProof(&assignment)
 		if err != nil {
 			return jsErr(err, "Cannot generate proof")
 		}
-		proofJSON, _ := json.Marshal(proofGenerated)
+		data := map[string]interface{}{
+			"proof": proofGenerated,
+			"input": inputProof,
+		}
+		dataJSON, _ := json.Marshal(data)
 
-		return string(proofJSON)
+		return string(dataJSON)
 	})
 }
 

@@ -4,6 +4,7 @@ all: build abigen go-test
 
 build:
 	go run zk/build/main.go
+	abigen
 
 clean-abi-generated:
 	cd solidity && rm -fr ./abi/*
@@ -12,7 +13,8 @@ solc: clean-abi-generated
 	cd solidity && solc --bin --abi -o ./abi *.sol
 
 abigen: solc
-	cd solidity && abigen --bin ./abi/Contract_MerkleCircuit_sol_Pairing.bin --abi abi/Contract_MerkleCircuit_sol_Pairing.abi --pkg solidity --out solidity_Contract_MerkleCircuit.go --type MerkleCircuit
+	cd solidity && abigen --bin ./abi/Contract_MerkleCircuit_sol_Verifier.bin --abi abi/Contract_MerkleCircuit_sol_Verifier.abi --pkg solidity --out solidity_Contract_MerkleCircuit.go --type MerkleCircuit
+	cd solidity && abigen --bin ./abi/Contract_PrivateValueCircuit_sol_Verifier.bin --abi abi/Contract_PrivateValueCircuit_sol_Verifier.abi --pkg solidity --out solidity_Contract_PrivateValueCircuit.go --type PrivateValueCircuit
 
 abigen-merkle: solc
 	cd solidity && abigen --bin ./abi/MerkleProof.bin --abi abi/MerkleProof.abi --pkg solidity --out MerkleProof.go --type MerkleProof

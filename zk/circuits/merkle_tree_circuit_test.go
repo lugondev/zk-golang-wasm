@@ -13,7 +13,9 @@ import (
 	"github.com/consensys/gnark/std/hash/mimc"
 	"github.com/consensys/gnark/test"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	merkle "gnark-bid/merkle"
+	"gnark-bid/zk"
 	"testing"
 )
 
@@ -27,6 +29,7 @@ func (circuit *merkleCircuit) Define(api frontend.API) error {
 	if err != nil {
 		return err
 	}
+
 	gnarkMerkle.VerifyProof(api, hFunc, circuit.RootHash, circuit.Path, circuit.Helper)
 	return nil
 }
@@ -34,8 +37,9 @@ func (circuit *merkleCircuit) Define(api frontend.API) error {
 func TestMerkleCircuit(t *testing.T) {
 	assert := test.NewAssert(t)
 
+	leaves := math.BigPow(2, int64(zk.MerkleTreeDepth))
 	var list [][]byte
-	for i := 0; i < 1024*2; i++ {
+	for i := 0; i < int(leaves.Int64()); i++ {
 		r := fmt.Sprintf("%dabc", i+1)
 		list = append(list, []byte(r))
 	}
@@ -66,6 +70,7 @@ func TestMerkleCircuit(t *testing.T) {
 		Path:   make([]frontend.Variable, len(merkleProof)),
 		Helper: make([]frontend.Variable, len(merkleProof)-1),
 	}
+
 	_r1cs, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, &circuit)
 	assert.NoError(err)
 

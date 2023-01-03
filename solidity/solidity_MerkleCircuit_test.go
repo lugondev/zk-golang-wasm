@@ -1,20 +1,22 @@
 package solidity
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/consensys/gnark-crypto/accumulator/merkletree"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/test"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/thoas/go-funk"
 	merkle "gnark-bid/merkle"
 	"gnark-bid/wasm"
+	"gnark-bid/zk"
 	"gnark-bid/zk/circuits"
 	"math/big"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,18 +35,16 @@ type ExportSolidityTestSuiteMerkleVerifier struct {
 	contract *MerkleCircuit
 
 	// groth16 gnark objects
-	vk      groth16.VerifyingKey
-	pk      groth16.ProvingKey
-	proof   *bytes.Buffer
-	circuit zk_circuit.MerkleCircuit
-	r1cs    frontend.CompiledConstraintSystem
+	vk  groth16.VerifyingKey
+	pk  groth16.ProvingKey
+	g16 *zk.GnarkGroth16
 }
 
 func TestRunExportSolidityTestSuiteMerkleVerifier(t *testing.T) {
 	suite.Run(t, new(ExportSolidityTestSuiteMerkleVerifier))
 }
 
-var lenProof = 10
+var lenProof = zk.MerkleTreeDepth
 
 func (t *ExportSolidityTestSuiteMerkleVerifier) SetupTest() {
 
@@ -66,91 +66,83 @@ func (t *ExportSolidityTestSuiteMerkleVerifier) SetupTest() {
 	t.contract = v
 	t.backend.Commit()
 
-	t.circuit = zk_circuit.MerkleCircuit{
-		Path:   make([]frontend.Variable, lenProof),
-		Helper: make([]frontend.Variable, lenProof-1),
-	}
-	t.r1cs, err = frontend.Compile(ecc.BN254, r1cs.NewBuilder, &t.circuit)
-	t.NoError(err, "compiling R1CS failed")
-
 	vpKey, err := wasm.GetVPKey("MerkleCircuit")
 	t.NoError(err, "getting vpkey failed")
+
 	// read proving and verifying keys
 	t.pk = vpKey.PK
 	t.vk = vpKey.VK
 
+	var c zk_circuit.MerkleCircuit
+	c.Path = make([]frontend.Variable, lenProof+1)
+	c.Helper = make([]frontend.Variable, lenProof)
+
+	t.g16, err = zk.NewGnarkGroth16(vpKey, &c)
+	t.NoError(err, "init groth16 failed")
 }
 
 func (t *ExportSolidityTestSuiteMerkleVerifier) TestVerifyProof() {
+	assert := test.NewAssert(t.T())
 	leaves := math.BigPow(2, int64(lenProof))
 	var list [][]byte
 	for i := 0; i < int(leaves.Int64()); i++ {
 		r := fmt.Sprintf("%dabc", i+1)
 		list = append(list, []byte(r))
 	}
-	mkTree, err := merkle.NewMerkleTreeBytes(list)
-	t.NoError(err, "creating merkle tree failed")
 
-	proofIndex := 6
+	mkTree, err := merkle.NewMerkleTreeBytesZK(list)
+	assert.NoError(err, "creating merkle tree failed")
+
+	proofIndex := 1
 	leafHash := mkTree.Hashes[proofIndex]
 	fmt.Println("leafHash", hex.EncodeToString(leafHash))
-	merkleRoot, merkleProof, proofHelper, err := mkTree.BuilderProofHelper(leafHash)
-	t.NoError(err, "building merkle proof failed")
 	// create a valid proof
+	merkleRoot, merkleProof, proofHelper, err := mkTree.BuilderProofHelper(leafHash)
+	assert.NoError(err, "building merkle proof failed")
+	fmt.Println("merkleRoot", hex.EncodeToString(merkleRoot))
+	fmt.Println("merkleProof length:", len(merkleProof))
+	fmt.Println("proofHelper length:", len(proofHelper))
+	assert.Equal(len(merkleProof), lenProof+1, "proof length should be equal to lenProof+1")
 
-	merkleAssignment := &zk_circuit.MerkleCircuit{
-		Path:     make([]frontend.Variable, lenProof),
-		Helper:   make([]frontend.Variable, lenProof-1),
+	verified := merkletree.VerifyProof(mkTree.HashFunc(), merkleRoot, merkleProof, uint64(proofIndex), uint64(mkTree.NumLeaves()))
+	assert.True(verified, "merkle proof verification failed")
+
+	merkleAssignment := zk_circuit.MerkleCircuit{
+		Path: funk.Map(merkleProof, func(p []byte) frontend.Variable {
+			return p
+		}).([]frontend.Variable),
+		Helper: funk.Map(proofHelper, func(p int) frontend.Variable {
+			return p
+		}).([]frontend.Variable),
 		RootHash: merkleRoot,
 	}
-	for i := 0; i < lenProof; i++ {
-		merkleAssignment.Path[i] = merkleProof[i]
+
+	var circuit zk_circuit.MerkleCircuit
+	circuit.Path = make([]frontend.Variable, lenProof+1)
+	circuit.Helper = make([]frontend.Variable, lenProof)
+
+	assert.ProverSucceeded(&circuit, &merkleAssignment, test.WithCurves(ecc.BN254))
+
+	proofParser, g16Proof, err := t.g16.GenerateProof(&merkleAssignment)
+	assert.NoError(err, "proving failed")
+	fmt.Println("proof", proofParser)
+	fmt.Println("g16Proof", g16Proof)
+
+	// public witness
+	var publicInput [1]*big.Int
+	publicInput[0] = new(big.Int).SetBytes(merkleRoot)
+	// call the contract
+	res, err := t.contract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, publicInput)
+	if t.NoError(err, "calling verifier on chain gave error") {
+		t.True(res, "calling verifier on chain didn't succeed")
 	}
-	for i := 0; i < lenProof-1; i++ {
-		merkleAssignment.Helper[i] = proofHelper[i]
+
+	// (wrong) public witness
+	publicInput[0] = big.NewInt(11)
+
+	// call the contract should fail
+	res, err = t.contract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, publicInput)
+	if t.NoError(err, "calling verifier on chain gave error") {
+		t.False(res, "calling verifier on chain succeed, and shouldn't have")
 	}
-
-	// witness creation
-	witness, err := frontend.NewWitness(merkleAssignment, ecc.BN254)
-	t.NoError(err, "witness creation failed")
-
-	// prove
-	proof, err := groth16.Prove(t.r1cs, t.pk, witness)
-	t.NoError(err, "proving failed")
-	{
-		_, err = proof.WriteRawTo(t.proof)
-		t.NoError(err, "writing proof failed")
-	}
-
-	// witness creation
-	hiddenWitness, err := frontend.NewWitness(merkleAssignment, ecc.BN254)
-	// ensure gnark (Go) code verifies it
-	publicWitness, _ := hiddenWitness.Public()
-	fmt.Println("publicWitness:", publicWitness)
-
-	err = groth16.Verify(proof, t.vk, publicWitness)
-	t.NoError(err, "verifying failed")
-
-	//var buf bytes.Buffer
-	//_, _ = proof.WriteRawTo(&buf)
-	//proofBytes := buf.Bytes()
-	//
-	//proofParser := zk.ParserProof(proofBytes)
-	//
-	//// public witness
-	//proofParser.Input[0] = zk_circuit.HashMIMC(big.NewInt(42).Bytes())
-	//// call the contract
-	//res, err := t.contract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, proofParser.Input)
-	//if t.NoError(err, "calling verifier on chain gave error") {
-	//	t.True(res, "calling verifier on chain didn't succeed")
-	//}
-	//
-	//// (wrong) public witness
-	//proofParser.Input[0] = big.NewInt(pubValue)
-	//
-	//// call the contract should fail
-	//res, err = t.verifierContract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, proofParser.Input)
-	//if t.NoError(err, "calling verifier on chain gave error") {
-	//	t.False(res, "calling verifier on chain succeed, and shouldn't have")
-	//}
 }
