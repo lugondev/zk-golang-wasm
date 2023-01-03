@@ -12,9 +12,9 @@ type UserData struct {
 }
 
 type BidCircuit struct {
-	UserMerkleRoot                    frontend.Variable `gnark:",public"`
-	UserMerkleProof, UserMerkleHelper []frontend.Variable
-	User                              UserData
+	UserMerkleRoot                   frontend.Variable `gnark:",public"`
+	UserMerklePath, UserMerkleHelper []frontend.Variable
+	User                             UserData
 
 	BidValue frontend.Variable
 	BidHash  frontend.Variable `gnark:",public"`
@@ -28,13 +28,13 @@ func (circuit *BidCircuit) Define(api frontend.API) error {
 		return err
 	}
 
-	merkle.VerifyProof(api, hFunc, circuit.UserMerkleRoot, circuit.UserMerkleProof, circuit.UserMerkleHelper)
+	merkle.VerifyProof(api, hFunc, circuit.UserMerkleRoot, circuit.UserMerklePath, circuit.UserMerkleHelper)
 
 	leaf, err := HashPreImage(api, circuit.User.PrivateID)
 	if err != nil {
 		return err
 	}
-	api.AssertIsEqual(leaf, circuit.UserMerkleProof[0])
+	api.AssertIsEqual(leaf, circuit.UserMerklePath[0])
 
 	hashMIMC, err := HashPreImage(api, circuit.BidValue)
 	if err != nil {

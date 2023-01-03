@@ -2,9 +2,12 @@
 
 all: build abigen go-test
 
+build-bid:
+	go run zk/build-bid/main.go
+	cd solidity && abigen --bin ./abi/Contract_BidCircuit_sol_Verifier.bin --abi abi/Contract_BidCircuit_sol_Verifier.abi --pkg solidity --out solidity_Contract_BidCircuit.go --type BidCircuit
+
 build:
 	go run zk/build/main.go
-	abigen
 
 clean-abi-generated:
 	cd solidity && rm -fr ./abi/*
