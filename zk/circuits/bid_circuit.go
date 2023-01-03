@@ -11,7 +11,7 @@ type UserData struct {
 	PrivateID frontend.Variable
 }
 
-type BidCircuit struct {
+type BiddingCircuit struct {
 	UserMerkleRoot                   frontend.Variable `gnark:",public"`
 	UserMerklePath, UserMerkleHelper []frontend.Variable
 	User                             UserData
@@ -20,7 +20,7 @@ type BidCircuit struct {
 	BidHash  frontend.Variable `gnark:",public"`
 }
 
-func (circuit *BidCircuit) Define(api frontend.API) error {
+func (circuit *BiddingCircuit) Define(api frontend.API) error {
 	api.AssertIsEqual(circuits.IsZero(api, circuit.BidValue), 0)
 
 	hFunc, err := mimc.NewMiMC(api)

@@ -2,9 +2,10 @@
 
 all: build abigen go-test
 
-build-bid:
+build-bid-circuit:
 	go run zk/build-bid/main.go
-	cd solidity && abigen --bin ./abi/Contract_BidCircuit_sol_Verifier.bin --abi abi/Contract_BidCircuit_sol_Verifier.abi --pkg solidity --out solidity_Contract_BidCircuit.go --type BidCircuit
+
+build-bid: build-bid-circuit abigen-bid
 
 build:
 	go run zk/build/main.go
@@ -21,6 +22,9 @@ abigen: solc
 
 abigen-merkle: solc
 	cd solidity && abigen --bin ./abi/MerkleProof.bin --abi abi/MerkleProof.abi --pkg solidity --out MerkleProof.go --type MerkleProof
+
+abigen-bid: solc
+	cd solidity && abigen --bin ./abi/Contract_BiddingCircuit_sol_Verifier.bin --abi abi/Contract_BiddingCircuit_sol_Verifier.abi --pkg solidity --out solidity_Contract_BiddingCircuit.go --type BiddingCircuit
 
 go-test: abigen
 	cd solidity && go test
