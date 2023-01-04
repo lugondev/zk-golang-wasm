@@ -8,7 +8,6 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/go-playground/validator/v10"
 	"gnark-bid/wasm"
 	"gnark-bid/zk"
 	"gnark-bid/zk/circuits"
@@ -16,16 +15,21 @@ import (
 	"syscall/js"
 )
 
-var validation = validator.New()
+func initSession() js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) != 1 {
+			return jsErr(nil, "Invalid no of arguments passed")
+		}
+		fmt.Println("args", args)
 
-func jsErr(err error, message string) string {
-	if message == "" {
-		return fmt.Sprintf("{'error': '%s','message': '%s'}", err.Error(), message)
-	}
-	if err == nil {
-		return fmt.Sprintf("{'error': '%s'}", message)
-	}
-	return fmt.Sprintf("{'error': '%s'}", err.Error())
+		if err := validation.Var(args[0].String(), "required,hexadecimal"); err != nil {
+			return jsErr(err, "Invalid argument input passed")
+		}
+
+		value := common.FromHex(args[0].String())
+		hashMIMC := zk_circuit.HashMIMC(value)
+		return fmt.Sprintf("{'numHash': '%s','hexHash': '%s'}", hashMIMC.String(), hashMIMC.Text(16))
+	})
 }
 
 func hash() js.Func {
@@ -140,7 +144,8 @@ func verifyProof() js.Func {
 }
 
 func main() {
-	fmt.Println("Go Web Assembly")
+	fmt.Println("Go Web Assembly - Bidding Platform")
+	js.Global().Set("initSession", initSession())
 	js.Global().Set("hash", hash())
 	js.Global().Set("generateProof", generateProof())
 	js.Global().Set("verifyProof", verifyProof())

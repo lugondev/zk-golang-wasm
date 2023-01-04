@@ -38,11 +38,12 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) SetupTest() {
 func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 	assert := test.NewAssert(t.Suite.T())
 
+	roomId := 111
 	leaves := math.BigPow(2, int64(zk.MerkleTreeDepth))
 	var list [][]byte
 	// generate leaves: users use this to generate their own merkle tree
 	for i := 0; i < int(leaves.Int64()); i++ {
-		r := fmt.Sprintf("username_%d", i+1)
+		r := fmt.Sprintf("user=username_%d|room=%d", i+1, roomId)
 		list = append(list, new(big.Int).SetBytes([]byte(r)).Bytes())
 	}
 
@@ -51,10 +52,10 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 	assert.NoError(err, "creating merkle tree failed")
 
 	// create a proof for a leaf: simulate user 1
-	username := fmt.Sprintf("username_%d", 2)
-	fmt.Println("username", username)
+	userId := fmt.Sprintf("user=username_%d|room=%d", 2, roomId)
+	fmt.Println("user id", userId)
 
-	usernameId := new(big.Int).SetBytes([]byte(username))
+	usernameId := new(big.Int).SetBytes([]byte(userId))
 	leafHash := zkCircuit.HashMIMC(usernameId.Bytes()).Bytes()
 	fmt.Println("hash", hex.EncodeToString(leafHash))
 	proofIndex := funk.IndexOf(mkTree.Hashes, leafHash)
@@ -99,14 +100,14 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 		}).([]frontend.Variable),
 		UserMerkleRoot: merkleRoot,
 		BidValue:       bidValue,
-		DataID: zkCircuit.DataID{
-			Nullifier:    nullifier,
-			IdCommitment: idCommitment,
-			Trapdoor:     trapdoorNumber,
+		Identity: zkCircuit.Identity{
+			Nullifier:  nullifier,
+			Commitment: idCommitment,
+			Trapdoor:   trapdoorNumber,
 		},
 		UserData: zkCircuit.UserData{
-			UserID:    usernameId,
-			PrivateID: privateUserId,
+			UserID:      usernameId,
+			PrivateCode: privateUserId,
 		},
 	}
 

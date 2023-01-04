@@ -8,14 +8,14 @@ import (
 )
 
 type UserData struct {
-	UserID    frontend.Variable
-	PrivateID frontend.Variable
+	UserID      frontend.Variable
+	PrivateCode frontend.Variable
 }
 
-type DataID struct {
-	Nullifier    frontend.Variable `gnark:",public"`
-	IdCommitment frontend.Variable `gnark:",public"`
-	Trapdoor     frontend.Variable `gnark:",public"`
+type Identity struct {
+	Nullifier  frontend.Variable `gnark:",public"`
+	Commitment frontend.Variable `gnark:",public"`
+	Trapdoor   frontend.Variable `gnark:",public"`
 }
 
 type BiddingCircuit struct {
@@ -23,7 +23,7 @@ type BiddingCircuit struct {
 	UserMerklePath, UserMerkleHelper []frontend.Variable
 
 	UserData UserData
-	DataID   DataID `gnark:",public"`
+	Identity Identity `gnark:",public"`
 
 	BidValue frontend.Variable `gnark:",public"`
 }
@@ -49,12 +49,12 @@ func (circuit *BiddingCircuit) Define(api frontend.API) error {
 	api.AssertIsEqual(circuit.UserMerklePath[0], userHash)
 
 	// check user commitment
-	userCommitment := circuits.Poseidon(api, []frontend.Variable{circuit.UserData.UserID, circuit.UserData.PrivateID})
-	api.AssertIsEqual(userCommitment, circuit.DataID.IdCommitment)
+	userCommitment := circuits.Poseidon(api, []frontend.Variable{circuit.UserData.UserID, circuit.UserData.PrivateCode})
+	api.AssertIsEqual(userCommitment, circuit.Identity.Commitment)
 
 	// check trapdoor
-	trapdoor := circuits.Poseidon(api, []frontend.Variable{userCommitment, circuit.DataID.Nullifier})
-	api.AssertIsEqual(trapdoor, circuit.DataID.Trapdoor)
+	trapdoor := circuits.Poseidon(api, []frontend.Variable{userCommitment, circuit.Identity.Nullifier})
+	api.AssertIsEqual(trapdoor, circuit.Identity.Trapdoor)
 
 	return nil
 }
