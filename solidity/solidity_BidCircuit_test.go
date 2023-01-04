@@ -74,9 +74,9 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 	assert.True(verified, "merkle proof verification failed")
 
 	// create proof bidding
-	privateUserId := big.NewInt(1111222233334444)
+	privateCode := big.NewInt(1111222233334444)
 	bidValue := big.NewInt(100) //  keep in mind, don't share this value with anyone
-	idCommitment, err := poseidon.Hash([]*big.Int{usernameId, privateUserId})
+	idCommitment, err := poseidon.Hash([]*big.Int{usernameId, privateCode})
 	assert.NoError(err, "poseidon hash failed")
 
 	// random nullifier: keep in mind, don't share this value with anyone
@@ -107,7 +107,7 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 		},
 		UserData: zkCircuit.UserData{
 			UserID:      usernameId,
-			PrivateCode: privateUserId,
+			PrivateCode: privateCode,
 		},
 	}
 

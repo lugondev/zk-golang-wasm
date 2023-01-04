@@ -1,16 +1,15 @@
-package wasm
+package zk
 
 import (
 	"fmt"
-	"gnark-bid/zk"
 )
 
-func readJsonVPKey() (map[string]*zk.VPKey, error) {
+func readJsonVPKey() (map[string]*VPKey, error) {
 	jsonData := []byte(`{{.}}`)
-	return zk.ParseMapData(jsonData)
+	return ParseMapData(jsonData)
 }
 
-func GetVPKey(name string) (*zk.VPKey, error) {
+func GetVPKey(name string) (*VPKey, error) {
 	keys, err := readJsonVPKey()
 	if err != nil {
 		return nil, err

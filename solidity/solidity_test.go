@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/suite"
-	"gnark-bid/wasm"
 	"gnark-bid/zk"
 	"math/big"
 )
@@ -48,7 +47,7 @@ func InitSetup[T any](t *ExportSolidityTestSuite[T], circuit frontend.Circuit, d
 	t.contract = v
 	t.backend.Commit()
 
-	vpKey, err := wasm.GetVPKey(vpName)
+	vpKey, err := zk.GetVPKey(vpName)
 	t.NoError(err, "getting vpkey failed")
 
 	// read proving and verifying keys

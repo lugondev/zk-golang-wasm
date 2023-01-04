@@ -25,28 +25,6 @@ func InitGroth16(c frontend.Circuit, name string) (*VPKey, error) {
 		return nil, err
 	}
 
-	//{
-	//	f, err := os.Create("solidity/zk.g16.vk")
-	//	if err != nil {
-	//		return err
-	//	}
-	//	_, err = vk.WriteRawTo(f)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//{
-	//	f, err := os.Create("solidity/zk.g16.pk")
-	//	if err != nil {
-	//		return err
-	//	}
-	//	_, err = pk.WriteRawTo(f)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-
 	{
 		f, err := os.Create(fmt.Sprintf("solidity/Contract_%s.sol", name))
 		if err != nil {
@@ -91,7 +69,7 @@ func WriteJsonFile(jsonBytes []byte, fileName string) error {
 
 func WriteTemplateKey(data map[string]*VPKey) error {
 	jsonBytes, _ := json.Marshal(data)
-	return GenerateTemplateKey(jsonBytes, "wasm/parse_vp_key.go")
+	return GenerateTemplateKey(jsonBytes, "zk/parse_vp_key.go")
 }
 
 func GenerateTemplateKey(jsonBytes []byte, fileName string) error {

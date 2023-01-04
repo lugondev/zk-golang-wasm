@@ -45,33 +45,33 @@ func ProofToBytes(proof Proof) []byte {
 	return proofBytes
 }
 
-func GetVPKey(jsonBytes []byte) (*VPKey, error) {
-	var vpKey *VPKey
-	err := json.Unmarshal(jsonBytes, &vpKey)
-	if err != nil {
-		return nil, err
-	}
-
-	vpKey.PK = groth16.NewProvingKey(ecc.BN254)
-	{
-		pkBuf := bytes.NewBuffer(common.FromHex(vpKey.ProvingKey))
-		_, err = vpKey.PK.ReadFrom(pkBuf)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	vpKey.VK = groth16.NewVerifyingKey(ecc.BN254)
-	{
-		vkBuf := bytes.NewBuffer(common.FromHex(vpKey.VerifyingKey))
-		_, err = vpKey.VK.ReadFrom(vkBuf)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return vpKey, nil
-}
+//func GetVPKey(jsonBytes []byte) (*VPKey, error) {
+//	var vpKey *VPKey
+//	err := json.Unmarshal(jsonBytes, &vpKey)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	vpKey.PK = groth16.NewProvingKey(ecc.BN254)
+//	{
+//		pkBuf := bytes.NewBuffer(common.FromHex(vpKey.ProvingKey))
+//		_, err = vpKey.PK.ReadFrom(pkBuf)
+//		if err != nil {
+//			return nil, err
+//		}
+//	}
+//
+//	vpKey.VK = groth16.NewVerifyingKey(ecc.BN254)
+//	{
+//		vkBuf := bytes.NewBuffer(common.FromHex(vpKey.VerifyingKey))
+//		_, err = vpKey.VK.ReadFrom(vkBuf)
+//		if err != nil {
+//			return nil, err
+//		}
+//	}
+//
+//	return vpKey, nil
+//}
 
 func formatVPKey(vkKey string, pkKey string) (*VPKey, error) {
 	vpKey := &VPKey{}

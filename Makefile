@@ -5,7 +5,7 @@ all: build abigen go-test
 build-bid-circuit:
 	go run zk/build-bid/main.go
 
-build-bid: build-bid-circuit abigen-bid
+build-bid: build-bid-circuit abigen-bid build-wasm
 
 build:
 	go run zk/build/main.go
@@ -32,6 +32,6 @@ go-test: abigen
 remixd:
 	remixd -s ./ -u https://remix.ethereum.org
 
-build-wasm: build
+build-wasm:
 	cd wasm/build && GOOS=js GOARCH=wasm go build -o  ../../assets/json.wasm
 
