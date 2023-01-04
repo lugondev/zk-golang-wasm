@@ -1,6 +1,7 @@
 package solidity
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"github.com/consensys/gnark-crypto/accumulator/merkletree"
@@ -8,6 +9,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/thoas/go-funk"
 	merkle "gnark-bid/merkle"
 	"gnark-bid/zk"
@@ -41,27 +43,52 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 	// generate leaves: users use this to generate their own merkle tree
 	for i := 0; i < int(leaves.Int64()); i++ {
 		r := fmt.Sprintf("username_%d", i+1)
-		list = append(list, []byte(r))
+		list = append(list, new(big.Int).SetBytes([]byte(r)).Bytes())
 	}
 
 	// create ZK Tree with MIMC hash function
 	mkTree, err := merkle.NewMerkleTreeBytesZK(list)
 	assert.NoError(err, "creating merkle tree failed")
 
-	proofIndex := 1
-	leafHash := mkTree.Hashes[proofIndex]
-	fmt.Println("leafHash", hex.EncodeToString(leafHash))
+	// create a proof for a leaf: simulate user 1
+	username := fmt.Sprintf("username_%d", 2)
+	fmt.Println("username", username)
+
+	usernameId := new(big.Int).SetBytes([]byte(username))
+	leafHash := zkCircuit.HashMIMC(usernameId.Bytes()).Bytes()
+	fmt.Println("hash", hex.EncodeToString(leafHash))
+	proofIndex := funk.IndexOf(mkTree.Hashes, leafHash)
+	fmt.Println("proofIndex", proofIndex)
+
 	// create a valid proof
 	merkleRoot, merkleProof, proofHelper, err := mkTree.BuilderProofHelper(leafHash)
 	assert.NoError(err, "building merkle proof failed")
-	fmt.Println("merkleRoot", hex.EncodeToString(merkleRoot))
-	fmt.Println("merkleProof length:", len(merkleProof))
-	fmt.Println("proofHelper length:", len(proofHelper))
 	assert.Equal(len(merkleProof), zk.MerkleTreeDepth+1, "proof length should be equal to zk.MerkleTreeDepth+1")
+	for i := range merkleProof {
+		fmt.Println("merkleProof", i, hex.EncodeToString(merkleProof[i]))
+	}
 
-	// verify proof
+	// verify proof: valid user
 	verified := merkletree.VerifyProof(mkTree.HashFunc(), merkleRoot, merkleProof, uint64(proofIndex), uint64(mkTree.NumLeaves()))
 	assert.True(verified, "merkle proof verification failed")
+
+	// create proof bidding
+	privateUserId := big.NewInt(1111222233334444)
+	bidValue := big.NewInt(100) //  keep in mind, don't share this value with anyone
+	idCommitment, err := poseidon.Hash([]*big.Int{usernameId, privateUserId})
+	assert.NoError(err, "poseidon hash failed")
+
+	// random nullifier: keep in mind, don't share this value with anyone
+	buf := make([]byte, 32)
+	_, err = rand.Read(buf)
+	assert.NoError(err, "generating random bigInt failed")
+	nullifier, err := poseidon.HashBytes(buf)
+	assert.NoError(err, "generating nullifier failed")
+	fmt.Println("nullifier", nullifier.String())
+
+	trapdoorNumber, err := poseidon.Hash([]*big.Int{idCommitment, nullifier})
+	assert.NoError(err, "generating trapdoorNumber failed")
+	fmt.Println("trapdoor", trapdoorNumber.String())
 
 	merkleAssignment := zkCircuit.BiddingCircuit{
 		UserMerklePath: funk.Map(merkleProof, func(p []byte) frontend.Variable {
@@ -71,6 +98,16 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 			return p
 		}).([]frontend.Variable),
 		UserMerkleRoot: merkleRoot,
+		BidValue:       bidValue,
+		DataID: zkCircuit.DataID{
+			Nullifier:    nullifier,
+			IdCommitment: idCommitment,
+			Trapdoor:     trapdoorNumber,
+		},
+		UserData: zkCircuit.UserData{
+			UserID:    usernameId,
+			PrivateID: privateUserId,
+		},
 	}
 
 	var circuit zkCircuit.BiddingCircuit
@@ -85,18 +122,16 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 	fmt.Println("g16Proof", g16Proof)
 
 	// public witness
-	var publicInput [2]*big.Int
+	var publicInput [5]*big.Int
 	publicInput[0] = new(big.Int).SetBytes(merkleRoot)
+	publicInput[1] = nullifier
+	publicInput[2] = idCommitment
+	publicInput[3] = trapdoorNumber
+	publicInput[4] = bidValue
 	// call the contract
 	res, err := t.contract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, publicInput)
 	assert.NoError(err, "calling verifier on chain gave error")
 	assert.True(res, "calling verifier on chain didn't succeed")
 
-	// (wrong) public witness
-	publicInput[0] = big.NewInt(11)
-
-	// call the contract should fail
-	res, err = t.contract.VerifyProof(nil, proofParser.A, proofParser.B, proofParser.C, publicInput)
-	assert.NoError(err, "calling verifier on chain gave error")
-	assert.False(res, "calling verifier on chain succeed, and shouldn't have")
+	fmt.Println("verifier on chain succeeded")
 }

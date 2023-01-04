@@ -10,6 +10,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/test"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/thoas/go-funk"
 	merkle "gnark-bid/merkle"
 	"gnark-bid/zk/circuits"
@@ -29,6 +30,21 @@ func TestHashPreImage(t *testing.T) {
 		Hash:     hash,
 		PreImage: preImage,
 	}, test.WithCurves(ecc.BN254))
+}
+
+func TestPoseidon(t *testing.T) {
+	nullifier := big.NewInt(123123)
+	trapdoor := big.NewInt(789789)
+	p, err := poseidon.Hash([]*big.Int{nullifier, trapdoor})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p2, err := poseidon.Hash([]*big.Int{p})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(p2.String())
 }
 
 func TestMerkleTree(t *testing.T) {

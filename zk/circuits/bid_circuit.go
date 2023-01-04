@@ -8,16 +8,24 @@ import (
 )
 
 type UserData struct {
+	UserID    frontend.Variable
 	PrivateID frontend.Variable
+}
+
+type DataID struct {
+	Nullifier    frontend.Variable `gnark:",public"`
+	IdCommitment frontend.Variable `gnark:",public"`
+	Trapdoor     frontend.Variable `gnark:",public"`
 }
 
 type BiddingCircuit struct {
 	UserMerkleRoot                   frontend.Variable `gnark:",public"`
 	UserMerklePath, UserMerkleHelper []frontend.Variable
-	User                             UserData
 
-	BidValue frontend.Variable
-	BidHash  frontend.Variable `gnark:",public"`
+	UserData UserData
+	DataID   DataID `gnark:",public"`
+
+	BidValue frontend.Variable `gnark:",public"`
 }
 
 func (circuit *BiddingCircuit) Define(api frontend.API) error {
@@ -30,16 +38,23 @@ func (circuit *BiddingCircuit) Define(api frontend.API) error {
 
 	merkle.VerifyProof(api, hFunc, circuit.UserMerkleRoot, circuit.UserMerklePath, circuit.UserMerkleHelper)
 
-	leaf, err := HashPreImage(api, circuit.User.PrivateID)
+	// preimage user id
+	userHash, err := HashPreImage(api, circuit.UserData.UserID)
 	if err != nil {
 		return err
 	}
-	api.AssertIsEqual(leaf, circuit.UserMerklePath[0])
 
-	hashMIMC, err := HashPreImage(api, circuit.BidValue)
-	if err != nil {
-		return err
-	}
-	api.AssertIsEqual(circuit.BidHash, hashMIMC)
+	api.Println(circuit.UserMerklePath[0], userHash)
+	// check user in merkle tree
+	api.AssertIsEqual(circuit.UserMerklePath[0], userHash)
+
+	// check user commitment
+	userCommitment := circuits.Poseidon(api, []frontend.Variable{circuit.UserData.UserID, circuit.UserData.PrivateID})
+	api.AssertIsEqual(userCommitment, circuit.DataID.IdCommitment)
+
+	// check trapdoor
+	trapdoor := circuits.Poseidon(api, []frontend.Variable{userCommitment, circuit.DataID.Nullifier})
+	api.AssertIsEqual(trapdoor, circuit.DataID.Trapdoor)
+
 	return nil
 }

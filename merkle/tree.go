@@ -83,7 +83,7 @@ func NewMerkleTreeBytes(bs [][]byte) (*Tree, error) {
 }
 
 func NewMerkleTreeBytesZK(bs [][]byte) (*Tree, error) {
-	bytesutil.Sort(bs)
+	//bytesutil.Sort(bs)
 
 	return newMerkleTree(funk.Map(bs, func(b []byte) ByteContent {
 		return ByteContent{B: b, HashFunc: mimc.NewMiMC}
