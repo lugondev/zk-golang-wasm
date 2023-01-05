@@ -75,6 +75,7 @@ func NewBidding() (*Bidding, error) {
 		return nil, err
 	}
 
+	// Get Verifier Key and Proving Key
 	vpKey, err := GetVPKey("BiddingCircuit")
 	if err != nil {
 		return nil, err
@@ -84,6 +85,10 @@ func NewBidding() (*Bidding, error) {
 	c.UserMerkleHelper = make([]frontend.Variable, MerkleTreeDepth)
 
 	g16, err := NewGnarkGroth16(vpKey, &c)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Bidding{
 		mkTree: mkTree,
 		g16:    g16,

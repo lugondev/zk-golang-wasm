@@ -54,6 +54,7 @@ func InitSetup[T any](t *ExportSolidityTestSuite[T], circuit frontend.Circuit, d
 	t.pk = vpKey.PK
 	t.vk = vpKey.VK
 
+	// create gnark groth16
 	t.g16, err = zk.NewGnarkGroth16(vpKey, circuit)
 	t.NoError(err, "init groth16 failed")
 }
