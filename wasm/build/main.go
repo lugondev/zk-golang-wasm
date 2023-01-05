@@ -17,13 +17,12 @@ func initBidding() js.Func {
 			return jsErr(nil, "Session already initialized")
 		}
 
-		go func() {
-			if b, err := zk.NewBidding(); err != nil {
-				fmt.Println(err, "Cannot init bidding")
-			} else {
-				bidding = b
-			}
-		}()
+		if b, err := zk.NewBidding(); err != nil {
+			return jsErr(err, "Cannot init bidding")
+		} else {
+			bidding = b
+		}
+
 		return fmt.Sprintf("{'status': '%s','message': '%s'}", "success", "Session initialized")
 	})
 }
