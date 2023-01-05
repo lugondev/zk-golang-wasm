@@ -1,8 +1,11 @@
 package zk
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -118,7 +121,7 @@ func (b *Bidding) generateIdentity() error {
 	if err != nil {
 		return err
 	}
-	trapdoorNumber, err := poseidon.Hash([]*big.Int{commitment, b.Identity.Commitment})
+	trapdoorNumber, err := poseidon.Hash([]*big.Int{commitment, b.Identity.Nullifier})
 	if err != nil {
 		return err
 	}
@@ -149,6 +152,11 @@ func (b *Bidding) RenewSession() error {
 
 func (b *Bidding) GetIdentity() Identity {
 	return b.Identity
+}
+
+func (b *Bidding) JoinRoom(roomId int) error {
+	b.RoomID = roomId
+	return b.RenewSession()
 }
 
 func (b *Bidding) GetProof(bidValue *big.Int) (*Proof, [5]*big.Int, error) {
@@ -192,4 +200,46 @@ func (b *Bidding) GetProof(bidValue *big.Int) (*Proof, [5]*big.Int, error) {
 	publicInput[4] = bidValue
 
 	return proofParser, publicInput, nil
+}
+
+func (b *Bidding) VerifyProof(proof *Proof, inputs [5]*big.Int) (bool, error) {
+	if !b.isReady {
+		return false, fmt.Errorf("session is not ready")
+	}
+
+	merklePath := make([]frontend.Variable, MerkleTreeDepth+1)
+	for i := 0; i < MerkleTreeDepth+1; i++ {
+		merklePath[i] = big.NewInt(0)
+	}
+	merkleHelper := make([]frontend.Variable, MerkleTreeDepth)
+	for i := 0; i < MerkleTreeDepth; i++ {
+		merkleHelper[i] = big.NewInt(0)
+	}
+
+	assignment := &zkCircuit.BiddingCircuit{
+		UserMerklePath:   merklePath,
+		UserMerkleHelper: merkleHelper,
+		UserMerkleRoot:   inputs[0],
+		BidValue:         inputs[4],
+		Identity: zkCircuit.Identity{
+			Nullifier:  inputs[1],
+			Commitment: inputs[2],
+			Trapdoor:   inputs[3],
+		},
+		UserData: zkCircuit.UserData{
+			UserID:      big.NewInt(0),
+			PrivateCode: big.NewInt(0),
+		},
+	}
+
+	g16Proof := groth16.NewProof(ecc.BN254)
+	proofBuf := bytes.NewBuffer(ProofToBytes(proof))
+	fmt.Println("compare:", bytes.Equal(ProofToBytes(proof), proofBuf.Bytes()))
+
+	if _, err := g16Proof.ReadFrom(proofBuf); err != nil {
+		fmt.Println("read proof error", err)
+		return false, err
+	}
+
+	return b.g16.VerifyProof(assignment, g16Proof)
 }

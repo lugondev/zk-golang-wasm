@@ -2,6 +2,7 @@ package zk
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
@@ -86,4 +87,26 @@ func (t *GnarkGroth16) GenerateProof(assignment frontend.Circuit) (*Proof, groth
 	proofStruct := ParserProof(proofBytes)
 
 	return proofStruct, proof, nil
+}
+
+func (t *GnarkGroth16) VerifyProof(assignment frontend.Circuit, proof groth16.Proof) (bool, error) {
+	// witness creation
+	witness, err := frontend.NewWitness(assignment, ecc.BN254)
+	if err != nil {
+		fmt.Println("NewWitness failed", err)
+		return false, err
+	}
+
+	publicWitness, err := witness.Public()
+	if err != nil {
+		fmt.Println("PublicWitness failed", err)
+		return false, err
+	}
+
+	if err := groth16.Verify(proof, t.vk, publicWitness); err != nil {
+		fmt.Println("Verify failed", err)
+		return false, err
+	} else {
+		return true, nil
+	}
 }

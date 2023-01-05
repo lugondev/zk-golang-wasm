@@ -136,3 +136,26 @@ func (t *ExportSolidityTestSuiteBiddingVerifier) TestVerifyProof() {
 
 	fmt.Println("verifier on chain succeeded")
 }
+
+func (t *ExportSolidityTestSuiteBiddingVerifier) TestBidding() {
+	assert := test.NewAssert(t.Suite.T())
+
+	bidding, err := zk.NewBidding()
+	assert.NoError(err, "creating bidding failed")
+	assert.NoError(bidding.InitSession(1111, "username_2", big.NewInt(1111222233334444)), "init session failed")
+
+	// create a proof for a leaf: simulate user 1
+	userId := fmt.Sprintf("user=username_%d|room=%d", 2, bidding.RoomID)
+	fmt.Println("user id", userId)
+
+	bidValue := big.NewInt(100)
+	proof, inputs, err := bidding.GetProof(bidValue)
+	assert.NoError(err, "creating proof failed")
+
+	// call the contract
+	res, err := t.contract.VerifyProof(nil, proof.A, proof.B, proof.C, inputs)
+	assert.NoError(err, "calling verifier on chain gave error")
+	assert.True(res, "calling verifier on chain didn't succeed")
+
+	fmt.Println("verifier on chain succeeded")
+}

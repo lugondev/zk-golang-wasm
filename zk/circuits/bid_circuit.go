@@ -44,7 +44,6 @@ func (circuit *BiddingCircuit) Define(api frontend.API) error {
 		return err
 	}
 
-	api.Println(circuit.UserMerklePath[0], userHash)
 	// check user in merkle tree
 	api.AssertIsEqual(circuit.UserMerklePath[0], userHash)
 

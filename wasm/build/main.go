@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"gnark-bid/zk"
+	"math/big"
 	"syscall/js"
 )
 
@@ -10,6 +13,9 @@ var bidding *zk.Bidding
 
 func initBidding() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		if bidding != nil {
+			return jsErr(nil, "Session already initialized")
+		}
 
 		b, err := zk.NewBidding()
 		if err != nil {
@@ -20,7 +26,7 @@ func initBidding() js.Func {
 	})
 }
 
-func initSession() js.Func {
+func createSession() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		if bidding == nil {
 			return jsErr(nil, "Session not initialized")
@@ -44,8 +50,12 @@ func initSession() js.Func {
 	})
 }
 
-func renewSession(bidding *zk.Bidding) js.Func {
+func renewSession() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		if bidding == nil {
+			return jsErr(nil, "Session not initialized")
+		}
+
 		err := bidding.RenewSession()
 		if err != nil {
 			return jsErr(err, "Cannot renew session")
@@ -54,109 +64,115 @@ func renewSession(bidding *zk.Bidding) js.Func {
 	})
 }
 
-func generateProof(bidding *zk.Bidding) js.Func {
+func isInitialized() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		return bidding != nil
+	})
+}
+
+func generateProof() js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		if bidding == nil {
+			return jsErr(nil, "Session not initialized")
+		}
+
 		if len(args) != 1 {
 			return jsErr(nil, "Invalid no of arguments passed")
 		}
 		if err := validation.Var(args[0].String(), "required,hexadecimal"); err != nil {
 			return jsErr(err, "Invalid argument input passed")
 		}
-		return ""
-		//inputBytes := common.FromHex(args[0].String())
-		//privateValue := new(big.Int).SetBytes(inputBytes)
-		//fmt.Println("privateValue", privateValue.String())
-		//
-		//assignment := zk_circuit.PrivateValueCircuit{
-		//	PrivateValue: privateValue.String(),
-		//	Hash:         zk_circuit.HashMIMC(inputBytes).String(),
-		//}
-		//
-		//if err := validation.Var(args[0].String(), "required,hexadecimal"); err != nil {
-		//	return jsErr(err, "Invalid argument input passed")
-		//}
-		//
-		//vkKey, err := zk.GetVPKey("PrivateValueCircuit")
-		//if err != nil {
-		//	return jsErr(err, "Cannot read keys")
-		//}
-		//
-		//var c zk_circuit.PrivateValueCircuit
-		//g16, err := zk.NewGnarkGroth16(vkKey, &c)
-		//if err != nil {
-		//	return jsErr(err, "")
-		//}
-		//
-		//inputProof := []*big.Int{zk_circuit.HashMIMC(inputBytes)}
-		//proofGenerated, _, err := g16.GenerateProof(&assignment)
-		//if err != nil {
-		//	return jsErr(err, "Cannot generate proof")
-		//}
-		//data := map[string]interface{}{
-		//	"proof": proofGenerated,
-		//	"input": inputProof,
-		//}
-		//dataJSON, _ := json.Marshal(data)
-		//
-		//return string(dataJSON)
+
+		inputBytes := common.FromHex(args[0].String())
+		bidValue := new(big.Int).SetBytes(inputBytes)
+		proofs, inputs, err := bidding.GetProof(bidValue)
+		if err != nil {
+			return jsErr(err, "Cannot generate proof")
+		}
+
+		data := map[string]interface{}{
+			"proofs": proofs,
+			"inputs": inputs,
+		}
+		dataJSON, _ := json.Marshal(data)
+
+		return string(dataJSON)
 	})
 }
 
-func verifyProof(bidding *zk.Bidding) js.Func {
+func joinRoom() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
-		if len(args) != 2 {
+		if bidding == nil {
+			return jsErr(nil, "Session not initialized")
+		}
+
+		if len(args) != 1 {
 			return jsErr(nil, "Invalid no of arguments passed")
 		}
 
-		return ""
-		//var proof zk.Proof
-		//if err := json.Unmarshal([]byte(args[0].String()), &proof); err != nil {
-		//	return jsErr(err, "Invalid proof passed")
-		//}
-		//if err := validation.Var(args[1].String(), "required,hexadecimal"); err != nil {
-		//	return jsErr(err, "Invalid argument input passed")
-		//}
-		//
-		//hashBytes := common.FromHex(args[1].String())
-		//hashValue := new(big.Int).SetBytes(hashBytes)
-		//fmt.Println("hash", hashValue.String())
-		//
-		//assignment := zk_circuit.PrivateValueCircuit{
-		//	PrivateValue: hashValue,
-		//	Hash:         hashValue.String(),
-		//}
-		//
-		//vkKey, err := zk.GetVPKey("PrivateValueCircuit")
-		//if err != nil {
-		//	return jsErr(err, "Cannot read keys")
-		//}
-		//
-		//witness, err := frontend.NewWitness(&assignment, ecc.BN254)
-		//if err != nil {
-		//	return jsErr(err, "Cannot create witness")
-		//}
-		//publicWitness, _ := witness.Public()
-		//proofBytes := zk.ProofToBytes(proof)
-		//proofG16 := groth16.NewProof(ecc.BN254)
-		//if _, err := proofG16.ReadFrom(bytes.NewReader(proofBytes)); err != nil {
-		//	return jsErr(err, "Cannot read proof")
-		//}
-		//
-		//if err := groth16.Verify(proofG16, vkKey.VK, publicWitness); err != nil {
-		//	return jsErr(err, "Cannot verify proof")
-		//} else {
-		//	return jsErr(nil, "Proof verified")
-		//}
+		if err := bidding.JoinRoom(args[0].Int()); err != nil {
+			return jsErr(err, "Cannot join room")
+		}
+
+		return fmt.Sprintf("{'status': '%s','message': '%s'}", "success", "Room joined")
+	})
+}
+
+func getCurrentSession() js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		if bidding == nil {
+			return jsErr(nil, "Session not initialized")
+		}
+
+		data := map[string]interface{}{
+			"identity":    bidding.GetIdentity(),
+			"roomID":      bidding.RoomID,
+			"privateCode": bidding.PrivateCode,
+			"username":    bidding.Username,
+		}
+		dataJSON, err := json.Marshal(data)
+		if err != nil {
+			return jsErr(err, "Cannot marshal data")
+		}
+
+		return string(dataJSON)
+	})
+}
+
+func verifyProof() js.Func {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) != 1 {
+			return jsErr(nil, "Invalid no of arguments passed")
+		}
+
+		var data struct {
+			Proofs *zk.Proof   `json:"proofs"`
+			Inputs [5]*big.Int `json:"inputs"`
+		}
+
+		if err := json.Unmarshal([]byte(args[0].String()), &data); err != nil {
+			return jsErr(err, "Cannot unmarshal data")
+		}
+
+		verified, err := bidding.VerifyProof(data.Proofs, data.Inputs)
+		if err != nil {
+			return jsErr(err, "Cannot verify proof")
+		}
+		return verified
 	})
 }
 
 func main() {
-
 	fmt.Println("Go Web Assembly - Bidding Platform")
+
+	js.Global().Set("isInitialized", isInitialized())
 	js.Global().Set("initBidding", initBidding())
-	js.Global().Set("initSession", initSession())
-	js.Global().Set("renewSession", renewSession(bidding))
-	js.Global().Set("generateProof", generateProof(bidding))
-	js.Global().Set("verifyProof", verifyProof(bidding))
+	js.Global().Set("createSession", createSession())
+	js.Global().Set("renewSession", renewSession())
+	js.Global().Set("getCurrentSession", getCurrentSession())
+	js.Global().Set("joinRoom", joinRoom())
+	js.Global().Set("generateProof", generateProof())
+	js.Global().Set("verifyProof", verifyProof())
+
 	<-make(chan bool)
 }

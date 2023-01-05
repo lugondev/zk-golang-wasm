@@ -31,7 +31,7 @@ func ParserProof(proofBytes []byte) *Proof {
 	return proof
 }
 
-func ProofToBytes(proof Proof) []byte {
+func ProofToBytes(proof *Proof) []byte {
 	proofBytes := make([]byte, 0, fpSize*8)
 	proofBytes = append(proofBytes, proof.A[0].Bytes()...)
 	proofBytes = append(proofBytes, proof.A[1].Bytes()...)
