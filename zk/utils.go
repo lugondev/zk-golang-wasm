@@ -3,12 +3,10 @@ package zk
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"time"
 )
 
 const MerkleTreeDepth = 10
@@ -51,14 +49,10 @@ func FormatVPKey(vkKey string, pkKey string) (*VPKey, error) {
 
 	vpKey.PK = groth16.NewProvingKey(ecc.BN254)
 	{
-		start := time.Now().Unix()
-		fmt.Println("start read pk", start)
 		pkBuf := bytes.NewBuffer(common.FromHex(pkKey))
-		fmt.Println("NewBuffer:", time.Now().Unix()-start)
 		if _, err := vpKey.PK.UnsafeReadFrom(pkBuf); err != nil {
 			return nil, err
 		}
-		fmt.Println("ReadFrom time:", time.Now().Unix()-start)
 	}
 
 	vpKey.VK = groth16.NewVerifyingKey(ecc.BN254)

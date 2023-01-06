@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/ethereum/go-ethereum/common"
 	"log"
+	"time"
 )
 
 type GnarkGroth16 struct {
@@ -69,6 +70,7 @@ func (t *GnarkGroth16) GenerateProof(assignment frontend.Circuit) (*Proof, groth
 		return nil, nil, err
 	}
 
+	fmt.Println("GP prove:", time.Now().Format(time.RFC3339))
 	// prove
 	proof, err := groth16.Prove(t.r1cs, t.pk, witness)
 	if err != nil {
@@ -82,10 +84,11 @@ func (t *GnarkGroth16) GenerateProof(assignment frontend.Circuit) (*Proof, groth
 		return nil, nil, err
 	}
 
+	fmt.Println("GP Verify:", time.Now().Format(time.RFC3339))
 	if err := groth16.Verify(proof, t.vk, publicWitness); err != nil {
 		return nil, nil, err
 	}
-
+	fmt.Println("GP Verify done:", time.Now().Format(time.RFC3339))
 	// get proof bytes
 	var proofBuffer bytes.Buffer
 	if _, err := proof.WriteRawTo(&proofBuffer); err != nil {
