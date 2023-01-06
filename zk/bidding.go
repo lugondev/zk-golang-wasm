@@ -61,7 +61,7 @@ func fakeListTesting() [][]byte {
 	return list
 }
 
-func NewBidding() (*Bidding, error) {
+func NewBidding(vpKey *VPKey) (*Bidding, error) {
 	mkTree, err := createMerkleTree(fakeListTesting())
 	if err != nil {
 		return nil, err
@@ -75,11 +75,15 @@ func NewBidding() (*Bidding, error) {
 		return nil, err
 	}
 
-	// Get Verifier Key and Proving Key
-	vpKey, err := GetVPKey("BiddingCircuit")
-	if err != nil {
-		return nil, err
+	// check time to set up
+	if vpKey == nil {
+		// Get Verifier Key and Proving Key
+		vpKey, err = GetVPKey("BiddingCircuit")
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	var c zkCircuit.BiddingCircuit
 	c.UserMerklePath = make([]frontend.Variable, MerkleTreeDepth+1)
 	c.UserMerkleHelper = make([]frontend.Variable, MerkleTreeDepth)

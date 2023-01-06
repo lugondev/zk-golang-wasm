@@ -14,31 +14,64 @@ import (
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 )
 
-func InitGroth16(c frontend.Circuit, name string) (*VPKey, error) {
+func GenerateGroth16R1csCompiler(c frontend.Circuit, name string, isWriteFileKey bool) (*VPKey, frontend.CompiledConstraintSystem, error) {
 	r1csCompiled, err := frontend.Compile(ecc.BN254, r1cs.NewBuilder, c)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	{
+		f, err := os.Create("solidity/r1cs.compiled.zk")
+		if err != nil {
+			return nil, nil, err
+		}
+		if _, err := r1csCompiled.WriteTo(f); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	pk, vk, err := groth16.Setup(r1csCompiled)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	if isWriteFileKey {
+		{
+			f, err := os.Create("solidity/zk.g16.vk")
+			if err != nil {
+				return nil, nil, err
+			}
+			if _, err := vk.WriteRawTo(f); err != nil {
+				return nil, nil, err
+			}
+		}
+
+		{
+			f, err := os.Create("solidity/zk.g16.pk")
+			if err != nil {
+				return nil, nil, err
+			}
+			if _, err := pk.WriteRawTo(f); err != nil {
+				return nil, nil, err
+			}
+		}
 	}
 
 	{
 		f, err := os.Create(fmt.Sprintf("solidity/Contract_%s.sol", name))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		err = vk.ExportSolidity(f)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return GenerateKey(pk, vk)
+	vpKey, err := CreateVPKey(pk, vk)
+	return vpKey, r1csCompiled, err
 }
 
-func GenerateKey(pk groth16.ProvingKey, vk groth16.VerifyingKey) (*VPKey, error) {
+func CreateVPKey(pk groth16.ProvingKey, vk groth16.VerifyingKey) (*VPKey, error) {
 	bufVk := new(bytes.Buffer)
 	bufPk := new(bytes.Buffer)
 	_, err := vk.WriteRawTo(bufVk)

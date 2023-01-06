@@ -30,7 +30,7 @@ func main() {
 		name := reflect.TypeOf(circuit).String()
 		structName := lastString(strings.Split(name, "."))
 		fmt.Println("circuit initializing:", structName)
-		k, err := zk.InitGroth16(circuit, structName)
+		k, _, err := zk.GenerateGroth16R1csCompiler(circuit, structName, false)
 		if err != nil {
 			log.Fatal("groth16 error:", err)
 		}

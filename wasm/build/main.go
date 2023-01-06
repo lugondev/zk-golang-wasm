@@ -17,7 +17,8 @@ func initBidding() js.Func {
 			return jsErr(nil, "Session already initialized")
 		}
 
-		if b, err := zk.NewBidding(); err != nil {
+		fmt.Println("Initializing bidding")
+		if b, err := zk.NewBidding(nil); err != nil {
 			return jsErr(err, "Cannot init bidding")
 		} else {
 			bidding = b

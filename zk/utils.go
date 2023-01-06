@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"time"
 )
 
 const MerkleTreeDepth = 10
@@ -24,9 +25,9 @@ func ParserProof(proofBytes []byte) *Proof {
 	proof.B[1][1] = new(big.Int).SetBytes(proofBytes[fpSize*5 : fpSize*6])
 	proof.C[0] = new(big.Int).SetBytes(proofBytes[fpSize*6 : fpSize*7])
 	proof.C[1] = new(big.Int).SetBytes(proofBytes[fpSize*7 : fpSize*8])
-	fmt.Println("a", proof.A)
-	fmt.Println("b", proof.B)
-	fmt.Println("c", proof.C)
+	//fmt.Println("a", proof.A)
+	//fmt.Println("b", proof.B)
+	//fmt.Println("c", proof.C)
 
 	return proof
 }
@@ -45,43 +46,19 @@ func ProofToBytes(proof *Proof) []byte {
 	return proofBytes
 }
 
-//func GetVPKey(jsonBytes []byte) (*VPKey, error) {
-//	var vpKey *VPKey
-//	err := json.Unmarshal(jsonBytes, &vpKey)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	vpKey.PK = groth16.NewProvingKey(ecc.BN254)
-//	{
-//		pkBuf := bytes.NewBuffer(common.FromHex(vpKey.ProvingKey))
-//		_, err = vpKey.PK.ReadFrom(pkBuf)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	vpKey.VK = groth16.NewVerifyingKey(ecc.BN254)
-//	{
-//		vkBuf := bytes.NewBuffer(common.FromHex(vpKey.VerifyingKey))
-//		_, err = vpKey.VK.ReadFrom(vkBuf)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	return vpKey, nil
-//}
-
-func formatVPKey(vkKey string, pkKey string) (*VPKey, error) {
+func FormatVPKey(vkKey string, pkKey string) (*VPKey, error) {
 	vpKey := &VPKey{}
 
 	vpKey.PK = groth16.NewProvingKey(ecc.BN254)
 	{
+		start := time.Now().Unix()
+		fmt.Println("start read pk", start)
 		pkBuf := bytes.NewBuffer(common.FromHex(pkKey))
-		if _, err := vpKey.PK.ReadFrom(pkBuf); err != nil {
+		fmt.Println("NewBuffer:", time.Now().Unix()-start)
+		if _, err := vpKey.PK.UnsafeReadFrom(pkBuf); err != nil {
 			return nil, err
 		}
+		fmt.Println("ReadFrom time:", time.Now().Unix()-start)
 	}
 
 	vpKey.VK = groth16.NewVerifyingKey(ecc.BN254)
@@ -95,14 +72,14 @@ func formatVPKey(vkKey string, pkKey string) (*VPKey, error) {
 	return vpKey, nil
 }
 
-func ParseMapData(jsonBytes []byte) (map[string]*VPKey, error) {
+func ParseMapVPData(jsonBytes []byte) (map[string]*VPKey, error) {
 	var vpKey map[string]*VPKey
 	if err := json.Unmarshal(jsonBytes, &vpKey); err != nil {
 		return nil, err
 	}
 	formatVP := make(map[string]*VPKey)
 	for k, v := range vpKey {
-		vp, err := formatVPKey(v.VerifyingKey, v.ProvingKey)
+		vp, err := FormatVPKey(v.VerifyingKey, v.ProvingKey)
 		if err != nil {
 			return nil, err
 		}

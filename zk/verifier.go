@@ -27,7 +27,7 @@ func NewGnarkGroth16(key *VPKey, circuit frontend.Circuit) (*GnarkGroth16, error
 		g16.r1cs = _r1cs
 	}
 
-	if err := g16.setup(key); err != nil {
+	if err := g16.setup(key); err != nil { // take a long time
 		return nil, err
 	}
 	return g16, nil
@@ -35,20 +35,28 @@ func NewGnarkGroth16(key *VPKey, circuit frontend.Circuit) (*GnarkGroth16, error
 
 func (t *GnarkGroth16) setup(vpKey *VPKey) error {
 	// read proving and verifying keys
-	t.pk = groth16.NewProvingKey(ecc.BN254)
-	{
-		pkBuf := bytes.NewBuffer(common.FromHex(vpKey.ProvingKey))
-		if _, err := t.pk.ReadFrom(pkBuf); err != nil {
-			log.Println(err, "reading proving key failed")
-			return err
+	t.pk = vpKey.PK
+	if t.pk == nil {
+		fmt.Println("pk is nil, generating pk from hex")
+		t.pk = groth16.NewProvingKey(ecc.BN254)
+		{
+			pkBuf := bytes.NewBuffer(common.FromHex(vpKey.ProvingKey))
+			if _, err := t.pk.ReadFrom(pkBuf); err != nil {
+				log.Println(err, "reading proving key failed")
+				return err
+			}
 		}
 	}
-	t.vk = groth16.NewVerifyingKey(ecc.BN254)
-	{
-		vkBuf := bytes.NewBuffer(common.FromHex(vpKey.VerifyingKey))
-		if _, err := t.vk.ReadFrom(vkBuf); err != nil {
-			log.Println(err, "reading verifying key failed")
-			return err
+	t.vk = vpKey.VK
+	if t.vk == nil {
+		fmt.Println("vk is nil, generating vk from hex")
+		t.vk = groth16.NewVerifyingKey(ecc.BN254)
+		{
+			vkBuf := bytes.NewBuffer(common.FromHex(vpKey.VerifyingKey))
+			if _, err := t.vk.ReadFrom(vkBuf); err != nil {
+				log.Println(err, "reading verifying key failed")
+				return err
+			}
 		}
 	}
 	return nil
