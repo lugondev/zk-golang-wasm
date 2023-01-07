@@ -18,8 +18,6 @@ type VP struct {
 
 func main() {
 	var cBid zk_circuit.BiddingCircuit
-	cBid.UserMerklePath = make([]frontend.Variable, zk.MerkleTreeDepth+1)
-	cBid.UserMerkleHelper = make([]frontend.Variable, zk.MerkleTreeDepth)
 	listCircuit := []frontend.Circuit{
 		&cBid,
 	}

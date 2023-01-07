@@ -9,7 +9,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/thoas/go-funk"
 	merkleTree "gnark-bid/merkle"
 	zkCircuit "gnark-bid/zk/circuits"
 	"math/big"
@@ -29,8 +28,7 @@ type Bidding struct {
 
 	Identity Identity
 
-	mkTree *merkleTree.Tree
-	g16    *GnarkGroth16
+	g16 *GnarkGroth16
 }
 
 func createMerkleTree(list [][]byte) (*merkleTree.Tree, error) {
@@ -62,12 +60,8 @@ func fakeListTesting() [][]byte {
 }
 
 func NewBidding(vpKey *VPKey) (*Bidding, error) {
-	mkTree, err := createMerkleTree(fakeListTesting())
-	if err != nil {
-		return nil, err
-	}
 	buf := make([]byte, 32)
-	if _, err = rand.Read(buf); err != nil {
+	if _, err := rand.Read(buf); err != nil {
 		return nil, err
 	}
 	nullifier, err := poseidon.HashBytes(buf)
@@ -85,8 +79,6 @@ func NewBidding(vpKey *VPKey) (*Bidding, error) {
 	}
 
 	var c zkCircuit.BiddingCircuit
-	c.UserMerklePath = make([]frontend.Variable, MerkleTreeDepth+1)
-	c.UserMerkleHelper = make([]frontend.Variable, MerkleTreeDepth)
 
 	g16, err := NewGnarkGroth16(vpKey, &c)
 	if err != nil {
@@ -94,8 +86,7 @@ func NewBidding(vpKey *VPKey) (*Bidding, error) {
 	}
 
 	return &Bidding{
-		mkTree: mkTree,
-		g16:    g16,
+		g16: g16,
 		Identity: Identity{
 			Nullifier: nullifier,
 		},
@@ -126,7 +117,8 @@ func (b *Bidding) getUserLeaf() []byte {
 }
 
 func (b *Bidding) generateIdentity() error {
-	commitment, err := poseidon.Hash([]*big.Int{b.getUserID(), b.PrivateCode})
+	preHash := zkCircuit.HashMIMC(b.getUserID().Bytes())
+	commitment, err := poseidon.Hash([]*big.Int{preHash, b.PrivateCode})
 	if err != nil {
 		return err
 	}
@@ -168,24 +160,13 @@ func (b *Bidding) JoinRoom(roomId int) error {
 	return b.RenewSession()
 }
 
-func (b *Bidding) GetProof(bidValue *big.Int) (*Proof, [5]*big.Int, error) {
+func (b *Bidding) GetProof(bidValue *big.Int) (*Proof, [4]*big.Int, error) {
 	if !b.isReady {
-		return nil, [5]*big.Int{}, fmt.Errorf("session is not ready")
-	}
-	merkleRoot, merkleProof, proofHelper, err := b.mkTree.BuilderProofHelper(b.getUserLeaf())
-	if err != nil {
-		return nil, [5]*big.Int{}, err
+		return nil, [4]*big.Int{}, fmt.Errorf("session is not ready")
 	}
 
 	merkleAssignment := zkCircuit.BiddingCircuit{
-		UserMerklePath: funk.Map(merkleProof, func(p []byte) frontend.Variable {
-			return p
-		}).([]frontend.Variable),
-		UserMerkleHelper: funk.Map(proofHelper, func(p int) frontend.Variable {
-			return p
-		}).([]frontend.Variable),
-		UserMerkleRoot: merkleRoot,
-		BidValue:       bidValue,
+		BidValue: bidValue,
 		Identity: zkCircuit.Identity{
 			Nullifier:  b.Identity.Nullifier,
 			Commitment: b.Identity.Commitment,
@@ -199,19 +180,18 @@ func (b *Bidding) GetProof(bidValue *big.Int) (*Proof, [5]*big.Int, error) {
 
 	proofParser, _, err := b.g16.GenerateProof(&merkleAssignment)
 	if err != nil {
-		return nil, [5]*big.Int{}, err
+		return nil, [4]*big.Int{}, err
 	}
-	var publicInput [5]*big.Int
-	publicInput[0] = new(big.Int).SetBytes(merkleRoot)
-	publicInput[1] = b.Identity.Nullifier
-	publicInput[2] = b.Identity.Commitment
-	publicInput[3] = b.Identity.Trapdoor
-	publicInput[4] = bidValue
+	var publicInput [4]*big.Int
+	publicInput[0] = b.Identity.Nullifier
+	publicInput[1] = b.Identity.Commitment
+	publicInput[2] = b.Identity.Trapdoor
+	publicInput[3] = bidValue
 
 	return proofParser, publicInput, nil
 }
 
-func (b *Bidding) VerifyProof(proof *Proof, inputs [5]*big.Int) (bool, error) {
+func (b *Bidding) VerifyProof(proof *Proof, inputs [4]*big.Int) (bool, error) {
 	if !b.isReady {
 		return false, fmt.Errorf("session is not ready")
 	}
@@ -226,10 +206,7 @@ func (b *Bidding) VerifyProof(proof *Proof, inputs [5]*big.Int) (bool, error) {
 	}
 
 	assignment := &zkCircuit.BiddingCircuit{
-		UserMerklePath:   merklePath,
-		UserMerkleHelper: merkleHelper,
-		UserMerkleRoot:   inputs[0],
-		BidValue:         inputs[4],
+		BidValue: inputs[3],
 		Identity: zkCircuit.Identity{
 			Nullifier:  inputs[1],
 			Commitment: inputs[2],

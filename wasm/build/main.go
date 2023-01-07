@@ -157,7 +157,7 @@ func verifyProof() js.Func {
 
 		var data struct {
 			Proofs *zk.Proof   `json:"proofs"`
-			Inputs [5]*big.Int `json:"inputs"`
+			Inputs [4]*big.Int `json:"inputs"`
 		}
 
 		if err := json.Unmarshal([]byte(args[0].String()), &data); err != nil {
