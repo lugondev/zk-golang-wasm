@@ -9,7 +9,14 @@ import (
 	"syscall/js"
 )
 
-var bidding *zk.Bidding
+var (
+	bidding  *zk.Bidding
+	document js.Value
+)
+
+func init() {
+	document = js.Global().Get("document")
+}
 
 func initBidding() js.Func {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -87,6 +94,7 @@ func generateProof() js.Func {
 
 		inputBytes := common.FromHex(args[0].String())
 		bidValue := new(big.Int).SetBytes(inputBytes)
+
 		proofs, inputs, err := bidding.GetProof(bidValue)
 		if err != nil {
 			return jsErr(err, "Cannot generate proof")

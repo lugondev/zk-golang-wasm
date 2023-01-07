@@ -74,7 +74,6 @@ func (t *GnarkGroth16) GenerateProof(assignment frontend.Circuit) (*Proof, groth
 	// prove
 	proof, err := groth16.Prove(t.r1cs, t.pk, witness)
 	if err != nil {
-
 		return nil, nil, err
 	}
 
