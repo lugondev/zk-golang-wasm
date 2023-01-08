@@ -20,22 +20,23 @@ func GenerateGroth16R1csCompiler(c frontend.Circuit, name string, isWriteFileKey
 		return nil, nil, err
 	}
 
-	{
-		f, err := os.Create("solidity/r1cs.compiled.zk")
-		if err != nil {
-			return nil, nil, err
-		}
-		if _, err := r1csCompiled.WriteTo(f); err != nil {
-			return nil, nil, err
-		}
-	}
-
 	pk, vk, err := groth16.Setup(r1csCompiled)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if isWriteFileKey {
+
+		{
+			f, err := os.Create("solidity/r1cs.compiled.zk")
+			if err != nil {
+				return nil, nil, err
+			}
+			if _, err := r1csCompiled.WriteTo(f); err != nil {
+				return nil, nil, err
+			}
+		}
+
 		{
 			f, err := os.Create("solidity/zk.g16.vk")
 			if err != nil {

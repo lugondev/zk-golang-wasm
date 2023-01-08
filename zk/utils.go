@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-const MerkleTreeDepth = 10
+const MerkleTreeDepth = 5
 
 const fpSize = 4 * 8
 
